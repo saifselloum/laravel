@@ -19,11 +19,14 @@ return new class extends Migration
         $table->enum('status', ['pending', 'in_progress', 'completed']);
         $table->enum('priority', ['low', 'medium', 'high']);
         $table->string('image_path')->nullable();
-        $table->foreignId('assigned_user_id')->constrained('users');
-        $table->foreignId('created_by')->constrained('users');
-        $table->foreignId('updated_by')->constrained('users');
-        $table->foreignId('project_id')->constrained('projects')->nullable(); // أضف هذا السطر
-        $table->timestamps();
+        $table->foreignId('assigned_user_id')->constrained('users')->cascadeOnDelete();
+        $table->foreignId('created_by')->constrained('users')->cascadeOnDelete();
+        $table->foreignId('updated_by')->constrained('users')->cascadeOnDelete();
+        $table->foreignId('project_id')
+        ->nullable()
+        ->constrained('projects')
+        ->onDelete('cascade');
+            $table->timestamps();
     });
 
     }

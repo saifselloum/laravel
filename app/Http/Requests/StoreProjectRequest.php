@@ -24,11 +24,11 @@ class StoreProjectRequest extends FormRequest
     {
         return [
             "name" => ['required', 'max:255'],
-            'image_path' => ['nullable', 'image', 'mimes:jpg,jpeg,png,gif', 'max:2048'],
-            "description" => ['required', 'string'],
-            "due_date" => ['required', 'date'],
+            'image' => ['nullable', 'image', 'mimes:jpg,jpeg,png,gif', 'max:2048'],
+            "description" => [ 'string'],
+            "due_date" => ['nullable', 'date'],
             "status" => ['required', Rule::in(['pending', 'in_progress', 'completed'])],
-            "priority" => ['required', 'integer'], 
+            "priority" => ['required', Rule::in(['low', 'medium', 'high']) ]
         ];
     }
 }

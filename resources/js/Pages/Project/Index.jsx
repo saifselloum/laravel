@@ -13,7 +13,7 @@ import {
 
 import { Head, Link, router } from "@inertiajs/react";
 
-function Index({ auth, projects, queryParams = null }) {
+function Index({ auth, projects, queryParams = null, success }) {
   queryParams = queryParams || {};
   const searchFieldChanged = (name, value) => {
     if (value) {
@@ -41,6 +41,15 @@ function Index({ auth, projects, queryParams = null }) {
     }
     router.get(route("project.index", queryParams));
   };
+  const deleteProject = (project) => {
+    if (confirm("Are you sure you want to delete this project?")) {
+      router.delete(route("project.destroy", project.id), {
+        onSuccess: () => console.log("Project deleted successfully"),
+        onError: (error) => console.error("Error deleting project:", error),
+      });
+    }
+  };
+  console.log(projects)
   return (
     <AuthenticatedLayout
       user={auth.user}
@@ -52,14 +61,22 @@ function Index({ auth, projects, queryParams = null }) {
           <Link
             href={route("project.create")}
             className="bg-emerald-500 py-1 px-3 text-white rounded shadow transition-all hover:bg-emerald-600 "
-          >Add new</Link>
+          >
+            Add new
+          </Link>
         </div>
       }
     >
       <Head title="Projects" />
       <div className="py-12">
         <div className="mx-auto max-w-7xl sm:px-6 lg:px-8">
+            {success&&(
+              <div className="bg-emerald-500 py-2 px-4 text-white rounded">
+                {success}
+              </div>
+            )}
           <div className="overflow-hidden bg-white shadow-sm sm:rounded-lg dark:bg-gray-800">
+            
             <div className="p-6 text-gray-900 dark:text-gray-100">
               <div className="overflow-auto">
                 <table className="w-full text-left rtl:text-right text-gray-500 dark:text-gray-400 ">
@@ -154,10 +171,13 @@ function Index({ auth, projects, queryParams = null }) {
                       >
                         <td className="px-3 py-2">{project.id}</td>
                         <td className="px-3 py-2">
-                          <img
+                          {project.image_path ? (
+                            <img
                             src={project.image_path}
                             className="w-10 h-10 object-cover rounded-full"
                           />
+                          )
+                        :<img src="https://placehold.co/40x40" className="rounded-full"/>}
                         </td>
                         <td className="px-3 py-2 text-gray-100 text-nowrap hover:underline">
                           <Link href={route("project.show", project.id)}>
@@ -183,12 +203,12 @@ function Index({ auth, projects, queryParams = null }) {
                           >
                             Edit
                           </Link>
-                          <Link
-                            href={route("project.destroy", project.id)}
+                          <button
+                          onClick={e => deleteProject(project)}
                             className="front-medium text-red-600 dark:text-red-500 hover:underline mx-1"
                           >
                             Delete
-                          </Link>
+                          </button>
                         </td>
                       </tr>
                     ))}

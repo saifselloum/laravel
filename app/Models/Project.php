@@ -13,14 +13,15 @@ class Project extends Model
     protected $fillable = [
         'name',
         'description',
-        'due_date',
         'status',
-        'priority',
+        'due_date',
         'image_path',
-        'assigned_user_id',
         'created_by',
         'updated_by',
+        'assigned_user_id',
+        'priority',
     ];
+    
     public function assignedUser()
     {
         return $this->belongsTo(User::class, 'assigned_user_id');
