@@ -24,6 +24,7 @@
     "dependencies": {
         "@heroicons/react": "^2.2.0",
         "@heroicons/vue": "^2.2.0",
-        "@inertiajs/inertia-react": "^0.8.1"
+        "@inertiajs/inertia-react": "^0.8.1",
+        "lucide-react": "^0.511.0"
     }
 }

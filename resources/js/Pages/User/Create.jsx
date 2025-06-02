@@ -1,120 +1,163 @@
-import InputError from "@/Components/InputError";
-import InputLabel from "@/Components/InputLabel";
-import TextInput from "@/Components/TextInput";
-import AuthenticatedLayout from "@/Layouts/AuthenticatedLayout";
-import { Head, Link, useForm } from "@inertiajs/react";
+"use client"
+
+import InputError from "@/Components/InputError"
+import InputLabel from "@/Components/InputLabel"
+import TextInput from "@/Components/TextInput"
+import AuthenticatedLayout from "@/Layouts/AuthenticatedLayout"
+import { Head, Link, useForm } from "@inertiajs/react"
+import { UserPlus, ArrowLeft, Mail, Lock, User } from "lucide-react"
 
 export default function Create({ auth }) {
-  const { data, setData, post, errors, reset } = useForm({
+  const { data, setData, post, errors, processing } = useForm({
     name: "",
     email: "",
     password: "",
     password_confirmation: "",
-  });
+  })
 
   const onSubmit = (e) => {
-    e.preventDefault();
-
-    post(route("user.store"));
-  };
+    e.preventDefault()
+    post(route("user.store"))
+  }
 
   return (
     <AuthenticatedLayout
       user={auth.user}
       header={
-        <div className="flex justify-between items-center">
-          <h2 className="font-semibold text-xl text-gray-800 dark:text-gray-200 leading-tight">
-            Create new User
-          </h2>
+        <div className="flex items-center justify-between">
+          <div className="flex items-center space-x-3">
+            <Link
+              href={route("user.index")}
+              className="p-2 text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors"
+            >
+              <ArrowLeft className="h-5 w-5" />
+            </Link>
+            <div className="bg-gradient-to-r from-emerald-500 to-green-600 p-2 rounded-lg">
+              <UserPlus className="h-6 w-6 text-white" />
+            </div>
+            <div>
+              <h2 className="text-2xl font-bold text-gray-800 dark:text-gray-200">Create New User</h2>
+              <p className="text-sm text-gray-500 dark:text-gray-400">Add a new team member</p>
+            </div>
+          </div>
         </div>
       }
     >
-      <Head title="Users" />
+      <Head title="Create User" />
 
-      <div className="py-12">
-        <div className="max-w-7xl mx-auto sm:px-6 lg:px-8">
-          <div className="bg-white dark:bg-gray-800 overflow-hidden shadow-sm sm:rounded-lg">
-            <form
-              onSubmit={onSubmit}
-              className="p-4 sm:p-8 bg-white dark:bg-gray-800 shadow sm:rounded-lg"
-            >
-              <div className="mt-4">
-                <InputLabel htmlFor="user_name" value="User Name" />
+      <div className="py-8">
+        <div className="max-w-2xl mx-auto sm:px-6 lg:px-8">
+          <div className="bg-white dark:bg-gray-800 overflow-hidden shadow-xl rounded-2xl border border-gray-200 dark:border-gray-700">
+            <div className="bg-gradient-to-r from-gray-50 to-gray-100 dark:from-gray-700 dark:to-gray-800 px-6 py-4 border-b border-gray-200 dark:border-gray-700">
+              <h3 className="text-lg font-semibold text-gray-900 dark:text-white">User Information</h3>
+              <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">Fill in the details for the new user</p>
+            </div>
 
+            <form onSubmit={onSubmit} className="p-6 space-y-6">
+              {/* Name Field */}
+              <div>
+                <InputLabel
+                  htmlFor="user_name"
+                  value="Full Name"
+                  className="flex items-center text-gray-700 dark:text-gray-300 font-medium"
+                >
+                  <User className="h-4 w-4 mr-2 text-gray-500 dark:text-gray-400" />
+                  Full Name
+                </InputLabel>
                 <TextInput
                   id="user_name"
                   type="text"
                   name="name"
                   value={data.name}
-                  className="mt-1 block w-full"
+                  className="mt-2 block w-full border-gray-300 dark:border-gray-600 rounded-lg shadow-sm focus:border-emerald-500 focus:ring-emerald-500"
                   isFocused={true}
                   onChange={(e) => setData("name", e.target.value)}
+                  placeholder="Enter full name"
                 />
-
                 <InputError message={errors.name} className="mt-2" />
               </div>
-              <div className="mt-4">
-                <InputLabel htmlFor="user_email" value="User Email" />
 
+              {/* Email Field */}
+              <div>
+                <InputLabel
+                  htmlFor="user_email"
+                  value="Email Address"
+                  className="flex items-center text-gray-700 dark:text-gray-300 font-medium"
+                >
+                  <Mail className="h-4 w-4 mr-2 text-gray-500 dark:text-gray-400" />
+                  Email Address
+                </InputLabel>
                 <TextInput
                   id="user_email"
-                  type="text"
+                  type="email"
                   name="email"
                   value={data.email}
-                  className="mt-1 block w-full"
+                  className="mt-2 block w-full border-gray-300 dark:border-gray-600 rounded-lg shadow-sm focus:border-emerald-500 focus:ring-emerald-500"
                   onChange={(e) => setData("email", e.target.value)}
+                  placeholder="Enter email address"
                 />
-
                 <InputError message={errors.email} className="mt-2" />
               </div>
 
-              <div className="mt-4">
-                <InputLabel htmlFor="user_password" value="Password" />
-
+              {/* Password Field */}
+              <div>
+                <InputLabel
+                  htmlFor="user_password"
+                  value="Password"
+                  className="flex items-center text-gray-700 dark:text-gray-300 font-medium"
+                >
+                  <Lock className="h-4 w-4 mr-2 text-gray-500 dark:text-gray-400" />
+                  Password
+                </InputLabel>
                 <TextInput
                   id="user_password"
                   type="password"
                   name="password"
                   value={data.password}
-                  className="mt-1 block w-full"
+                  className="mt-2 block w-full border-gray-300 dark:border-gray-600 rounded-lg shadow-sm focus:border-emerald-500 focus:ring-emerald-500"
                   onChange={(e) => setData("password", e.target.value)}
+                  placeholder="Enter password"
                 />
-
                 <InputError message={errors.password} className="mt-2" />
               </div>
 
-              <div className="mt-4">
+              {/* Confirm Password Field */}
+              <div>
                 <InputLabel
                   htmlFor="user_password_confirmation"
                   value="Confirm Password"
-                />
-
+                  className="flex items-center text-gray-700 dark:text-gray-300 font-medium"
+                >
+                  <Lock className="h-4 w-4 mr-2 text-gray-500 dark:text-gray-400" />
+                  Confirm Password
+                </InputLabel>
                 <TextInput
                   id="user_password_confirmation"
                   type="password"
                   name="password_confirmation"
                   value={data.password_confirmation}
-                  className="mt-1 block w-full"
-                  onChange={(e) =>
-                    setData("password_confirmation", e.target.value)
-                  }
+                  className="mt-2 block w-full border-gray-300 dark:border-gray-600 rounded-lg shadow-sm focus:border-emerald-500 focus:ring-emerald-500"
+                  onChange={(e) => setData("password_confirmation", e.target.value)}
+                  placeholder="Confirm password"
                 />
-
-                <InputError
-                  message={errors.password_confirmation}
-                  className="mt-2"
-                />
+                <InputError message={errors.password_confirmation} className="mt-2" />
               </div>
 
-              <div className="mt-4 text-right">
+              {/* Action Buttons */}
+              <div className="flex items-center justify-end space-x-4 pt-6 border-t border-gray-200 dark:border-gray-700">
                 <Link
                   href={route("user.index")}
-                  className="bg-gray-100 py-1 px-3 text-gray-800 rounded shadow transition-all hover:bg-gray-200 mr-2"
+                  className="inline-flex items-center px-4 py-2 bg-gray-200 dark:bg-gray-700 border border-transparent rounded-lg font-semibold text-xs text-gray-700 dark:text-gray-300 uppercase tracking-widest hover:bg-gray-300 dark:hover:bg-gray-600 focus:bg-gray-300 dark:focus:bg-gray-600 active:bg-gray-300 dark:active:bg-gray-600 focus:outline-none focus:ring-2 focus:ring-gray-500 focus:ring-offset-2 dark:focus:ring-offset-gray-800 transition ease-in-out duration-150"
                 >
                   Cancel
                 </Link>
-                <button className="bg-emerald-500 py-1 px-3 text-white rounded shadow transition-all hover:bg-emerald-600">
-                  Submit
+                <button
+                  type="submit"
+                  disabled={processing}
+                  className="inline-flex items-center px-4 py-2 bg-emerald-600 border border-transparent rounded-lg font-semibold text-xs text-white uppercase tracking-widest hover:bg-emerald-700 focus:bg-emerald-700 active:bg-emerald-800 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:ring-offset-2 dark:focus:ring-offset-gray-800 transition ease-in-out duration-150 disabled:opacity-50"
+                >
+                  <UserPlus className="h-4 w-4 mr-2" />
+                  Create User
                 </button>
               </div>
             </form>
@@ -122,5 +165,5 @@ export default function Create({ auth }) {
         </div>
       </div>
     </AuthenticatedLayout>
-  );
+  )
 }
