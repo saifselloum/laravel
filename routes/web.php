@@ -1,45 +1,28 @@
 <?php
 
-use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\ProjectController;
 use App\Http\Controllers\TaskController;
-use App\Http\Controllers\TaskWorkflowController;
-use App\Http\Controllers\TeamController;
 use App\Http\Controllers\UserController;
-use App\Http\Controllers\WorkflowController;
+use App\Http\Controllers\DashboardController;
+use App\Http\Controllers\ProjectInvitationController;
+use App\Http\Controllers\TeamController;
 use Illuminate\Foundation\Application;
 use Illuminate\Support\Facades\Route;
 use Inertia\Inertia;
 
-Route::redirect('/', '/register');
-
-Route::middleware(['auth'])->group(function () {
-    Route::get('/dashboard', [DashboardController::class, 'index'])
-        ->name('dashboard');
-
-    Route::resource('project', ProjectController::class);
-    Route::get('/task/my-tasks', [TaskController::class, 'myTasks'])
-        ->name('task.myTasks');
-    Route::resource('task', TaskController::class);
-    Route::resource('user', UserController::class);
-    
-    // Team routes
-    Route::resource('teams', TeamController::class);
-    Route::post('teams/{team}/members', [TeamController::class, 'addMember'])->name('teams.add-member');
-    Route::delete('teams/{team}/members/{user}', [TeamController::class, 'removeMember'])->name('teams.remove-member');
-    Route::patch('teams/{team}/members/{user}/role', [TeamController::class, 'updateMemberRole'])->name('teams.update-member-role');
-    
-    // Workflow routes
-    Route::get('/workflow', [WorkflowController::class, 'index'])->name('workflow.index');
-    Route::get('/workflow/teams/{team}', [WorkflowController::class, 'configure'])->name('workflow.configure');
-    Route::patch('/workflow/teams/{team}/permissions', [WorkflowController::class, 'updatePermissions'])->name('workflow.update-permissions');
-    
-    // Task workflow routes
-    Route::post('tasks/{task}/transition', [TaskWorkflowController::class, 'transition'])->name('tasks.transition');
-    Route::get('tasks/{task}/workflow/history', [TaskWorkflowController::class, 'history'])->name('tasks.workflow.history');
-    Route::get('tasks/{task}/workflow/transitions', [TaskWorkflowController::class, 'availableTransitions'])->name('tasks.workflow.transitions');
+Route::get('/', function () {
+    return Inertia::render('Welcome', [
+        'canLogin' => Route::has('login'),
+        'canRegister' => Route::has('register'),
+        'laravelVersion' => Application::VERSION,
+        'phpVersion' => PHP_VERSION,
+    ]);
 });
+
+Route::get('/dashboard', [DashboardController::class, 'index'])
+    ->middleware(['auth', 'verified'])
+    ->name('dashboard');
 
 Route::middleware('auth')->group(function () {
     Route::get('/profile', [ProfileController::class, 'edit'])->name('profile.edit');
@@ -47,4 +30,44 @@ Route::middleware('auth')->group(function () {
     Route::delete('/profile', [ProfileController::class, 'destroy'])->name('profile.destroy');
 });
 
-require __DIR__ . '/auth.php';
+// Public invitation routes (accessible without auth for email links)
+Route::get('/invitations/{token}', [ProjectInvitationController::class, 'show'])->name('invitations.show');
+
+Route::middleware(['auth', 'verified'])->group(function () {
+    // Projects
+    Route::resource('project', ProjectController::class);
+    
+    // Project Invitations
+    Route::prefix('projects/{project}')->group(function () {
+        Route::get('/invitations', [ProjectInvitationController::class, 'index'])->name('project.invitations.index');
+        Route::get('/invitations/create', [ProjectInvitationController::class, 'create'])->name('project.invitations.create');
+        Route::post('/invitations', [ProjectInvitationController::class, 'store'])->name('project.invitations.store');
+        Route::delete('/invitations/{invitation}', [ProjectInvitationController::class, 'destroy'])->name('project.invitations.destroy');
+        Route::delete('/members/{user}', [ProjectInvitationController::class, 'removeMember'])->name('project.members.remove');
+        
+        // Teams
+        Route::get('/teams', [TeamController::class, 'index'])->name('project.teams.index');
+        Route::get('/teams/create', [TeamController::class, 'create'])->name('project.teams.create');
+        Route::post('/teams', [TeamController::class, 'store'])->name('project.teams.store');
+        Route::get('/teams/{team}', [TeamController::class, 'show'])->name('project.teams.show');
+        Route::get('/teams/{team}/edit', [TeamController::class, 'edit'])->name('project.teams.edit');
+        Route::put('/teams/{team}', [TeamController::class, 'update'])->name('project.teams.update');
+        Route::delete('/teams/{team}', [TeamController::class, 'destroy'])->name('project.teams.destroy');
+        Route::post('/teams/{team}/members', [TeamController::class, 'addMember'])->name('project.teams.addMember');
+        Route::delete('/teams/{team}/members/{user}', [TeamController::class, 'removeMember'])->name('project.teams.removeMember');
+    });
+    
+    // Invitation acceptance (requires auth)
+    Route::post('/invitations/{token}/accept', [ProjectInvitationController::class, 'accept'])->name('invitations.accept');
+    Route::post('/invitations/{token}/decline', [ProjectInvitationController::class, 'decline'])->name('invitations.decline');
+    
+    // Tasks
+    Route::resource('task', TaskController::class);
+    
+    // Users (Admin only)
+    Route::middleware('can:admin-only')->group(function () {
+        Route::resource('user', UserController::class);
+    });
+});
+
+require __DIR__.'/auth.php';

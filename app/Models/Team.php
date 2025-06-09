@@ -13,21 +13,14 @@ class Team extends Model
 {
     use HasFactory;
 
-    // define the pivot table name if different
-    protected $table = 'teams';
-    // the pivot table is 'team_members' by default, but you can specify it if needed
-
     protected $fillable = [
         'name',
         'slug',
         'description',
         'color',
-        'is_active',
+        'project_id',
+        'team_leader_id',
         'created_by',
-    ];
-
-    protected $casts = [
-        'is_active' => 'boolean',
     ];
 
     protected static function boot()
@@ -41,65 +34,70 @@ class Team extends Model
         });
     }
 
+    /**
+     * The project this team belongs to
+     */
+    public function project(): BelongsTo
+    {
+        return $this->belongsTo(Project::class);
+    }
+
+    /**
+     * The team leader
+     */
+    public function leader(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'team_leader_id');
+    }
+
+    /**
+     * The user who created the team
+     */
     public function creator(): BelongsTo
     {
         return $this->belongsTo(User::class, 'created_by');
     }
 
+    /**
+     * Members of the team
+     */
     public function members(): BelongsToMany
     {
         return $this->belongsToMany(User::class, 'team_members')
-            ->withTimestamps()
-            ->withPivot('role');
+            ->withTimestamps();
     }
 
-    public function activeMembers(): BelongsToMany
-    {
-        return $this->members()->wherePivot('is_active', true);
-    }
-
-    public function teamMembers(): HasMany
-    {
-        return $this->hasMany(TeamMember::class);
-    }
-
+    /**
+     * Tasks assigned to this team
+     */
     public function tasks(): HasMany
     {
         return $this->hasMany(Task::class);
     }
 
-    public function workflowPermissions(): HasMany
+    /**
+     * Check if a user is a member of the team
+     */
+    public function isMember(User $user): bool
     {
-        return $this->hasMany(TeamWorkflowPermission::class);
+        return $this->members()->where('user_id', $user->id)->exists() || 
+               $this->team_leader_id === $user->id;
     }
 
-    public function getMemberRole(User $user): ?string
+    /**
+     * Check if a user can manage the team
+     */
+    public function canBeManageBy(User $user): bool
     {
-        $member = $this->members()->where('user_id', $user->id)->first();
-        return $member?->pivot->role;
+        return $this->team_leader_id === $user->id || 
+               $this->project->isCreator($user);
     }
 
-    public function hasMember(User $user): bool
+    /**
+     * Get all users who can be assigned to tasks in this team
+     */
+    public function getAssignableUsers()
     {
-        return $this->activeMembers()->where('user_id', $user->id)->exists();
-    }
-
-    public function canUserPerformTransition(User $user, WorkflowTransition $transition): bool
-    {
-        $userRole = $this->getMemberRole($user);
-        if (!$userRole) {
-            return false;
-        }
-
-        $permission = $this->workflowPermissions()
-            ->where('transition_id', $transition->id)
-            ->where('is_active', true)
-            ->first();
-
-        if (!$permission) {
-            return false;
-        }
-
-        return in_array($userRole, $permission->allowed_roles);
+        return $this->members()->get()->merge([$this->leader]);
     }
 }

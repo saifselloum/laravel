@@ -7,23 +7,135 @@ import TextAreaInput from "@/Components/TextAreaInput"
 import TextInput from "@/Components/TextInput"
 import AuthenticatedLayout from "@/Layouts/AuthenticatedLayout"
 import { Head, Link, useForm } from "@inertiajs/react"
-import { ArrowLeft, Calendar, CheckCircle, Clock, FileText, ImageIcon, Layers, User } from "lucide-react"
+import { ArrowLeft, Calendar, CheckCircle, Clock, FileText, ImageIcon, Layers, User, Users } from "lucide-react"
+import { useState, useEffect } from "react"
 
-export default function Create({ auth, projects, users }) {
+export default function Create({
+  auth,
+  projects,
+  allUsers = [],
+  allTeams = [],
+  projectTeamsMap = {},
+  projectUsersMap = {},
+  teamUsersMap = {},
+  selectedProjectId,
+  selectedTeamId,
+}) {
   const { data, setData, post, errors, processing } = useForm({
     image: "",
     name: "",
-    status: "",
+    status: "pending",
     description: "",
     due_date: "",
-    project_id: "",
-    priority: "",
+    project_id: selectedProjectId || "",
+    team_id: selectedTeamId || "",
+    priority: "medium",
     assigned_user_id: "",
   })
+
+  const [availableTeams, setAvailableTeams] = useState([])
+  const [availableUsers, setAvailableUsers] = useState([])
+  const [selectedProject, setSelectedProject] = useState(selectedProjectId || "")
+
+  // Filter teams and users based on selected project
+  useEffect(() => {
+    if (data.project_id) {
+      // Filter teams for selected project
+      const projectId = Number.parseInt(data.project_id)
+      const teamIds = projectTeamsMap[projectId] || []
+      const filteredTeams = allTeams.filter((team) => teamIds.includes(team.id))
+      setAvailableTeams(filteredTeams)
+
+      // Filter users for selected project
+      const userIds = projectUsersMap[projectId] || []
+      const filteredUsers = allUsers.filter((user) => userIds.includes(user.id))
+      setAvailableUsers(filteredUsers)
+    } else {
+      setAvailableTeams([])
+      setAvailableUsers([])
+    }
+  }, [data.project_id, projectTeamsMap, projectUsersMap, allTeams, allUsers])
+
+  // Filter users based on selected team
+  useEffect(() => {
+    if (data.team_id && data.project_id) {
+      const teamId = Number.parseInt(data.team_id)
+      const userIds = teamUsersMap[teamId] || []
+      const filteredUsers = allUsers.filter((user) => userIds.includes(user.id))
+      setAvailableUsers(filteredUsers)
+    } else if (data.project_id) {
+      // Reset to project users when no team is selected
+      const projectId = Number.parseInt(data.project_id)
+      const userIds = projectUsersMap[projectId] || []
+      const filteredUsers = allUsers.filter((user) => userIds.includes(user.id))
+      setAvailableUsers(filteredUsers)
+    }
+  }, [data.team_id, teamUsersMap, data.project_id, projectUsersMap, allUsers])
+
+  // Handle project change
+  const handleProjectChange = (projectId) => {
+    setData((prev) => ({
+      ...prev,
+      project_id: projectId,
+      team_id: "", // Reset team when project changes
+      assigned_user_id: "", // Reset assigned user when project changes
+    }))
+    setSelectedProject(projectId)
+  }
+
+  // Handle team change
+  const handleTeamChange = (teamId) => {
+    setData((prev) => ({
+      ...prev,
+      team_id: teamId,
+      assigned_user_id: "", // Reset assigned user when team changes
+    }))
+  }
 
   const onSubmit = (e) => {
     e.preventDefault()
     post(route("task.store"))
+  }
+
+  // Check if user has access to any projects
+  const projectsData = Array.isArray(projects?.data) ? projects.data : []
+  if (projectsData.length === 0) {
+    return (
+      <AuthenticatedLayout
+        user={auth.user}
+        header={
+          <div className="flex justify-between items-center">
+            <h2 className="font-semibold text-xl text-gray-800 dark:text-gray-200 leading-tight">Create New Task</h2>
+          </div>
+        }
+      >
+        <Head title="Create Task" />
+
+        <div className="py-12">
+          <div className="max-w-4xl mx-auto sm:px-6 lg:px-8">
+            <div className="bg-white dark:bg-gray-800 overflow-hidden shadow-sm sm:rounded-lg">
+              <div className="p-6 text-center">
+                <div className="mb-4">
+                  <Layers className="h-16 w-16 mx-auto text-gray-400 dark:text-gray-600" />
+                </div>
+                <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-2">No Project Access</h3>
+                <p className="text-gray-500 dark:text-gray-400 mb-6">
+                  You need to be a member of at least one project to create tasks. Please ask a project owner to invite
+                  you to their project.
+                </p>
+                <Link
+                  href={route("dashboard")}
+                  className="inline-flex items-center px-4 py-2 bg-gray-600 border border-transparent rounded-md font-semibold text-xs text-white uppercase tracking-widest hover:bg-gray-700 focus:bg-gray-700 active:bg-gray-800 focus:outline-none focus:ring-2 focus:ring-gray-500 focus:ring-offset-2 dark:focus:ring-offset-gray-800 transition ease-in-out duration-150"
+                >
+                  <ArrowLeft className="h-4 w-4 mr-2" />
+                  Back to Dashboard
+                </Link>
+              </div>
+            </div>
+          </div>
+        </div>
+      </AuthenticatedLayout>
+    )
   }
 
   return (
@@ -66,17 +178,18 @@ export default function Create({ auth, projects, users }) {
                       className="flex items-center text-gray-700 dark:text-gray-300"
                     >
                       <Layers className="h-4 w-4 mr-2 text-gray-500 dark:text-gray-400" />
-                      Project
+                      Project *
                     </InputLabel>
 
                     <SelectInput
                       name="project_id"
                       id="task_project_id"
+                      value={data.project_id}
                       className="mt-1 block w-full border-gray-300 dark:border-gray-700 rounded-md shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
-                      onChange={(e) => setData("project_id", e.target.value)}
+                      onChange={(e) => handleProjectChange(e.target.value)}
                     >
                       <option value="">Select Project</option>
-                      {projects.data.map((project) => (
+                      {projectsData.map((project) => (
                         <option value={project.id} key={project.id}>
                           {project.name}
                         </option>
@@ -86,6 +199,43 @@ export default function Create({ auth, projects, users }) {
                     <InputError message={errors.project_id} className="mt-2" />
                   </div>
 
+                  {/* Team Selection */}
+                  {data.project_id && (
+                    <div>
+                      <InputLabel
+                        htmlFor="task_team_id"
+                        value="Team (Optional)"
+                        className="flex items-center text-gray-700 dark:text-gray-300"
+                      >
+                        <Users className="h-4 w-4 mr-2 text-gray-500 dark:text-gray-400" />
+                        Team (Optional)
+                      </InputLabel>
+
+                      <SelectInput
+                        name="team_id"
+                        id="task_team_id"
+                        value={data.team_id}
+                        className="mt-1 block w-full border-gray-300 dark:border-gray-700 rounded-md shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
+                        onChange={(e) => handleTeamChange(e.target.value)}
+                      >
+                        <option value="">No Team</option>
+                        {availableTeams.map((team) => (
+                          <option value={team.id} key={team.id}>
+                            {team.name}
+                          </option>
+                        ))}
+                      </SelectInput>
+
+                      {availableTeams.length === 0 && data.project_id && (
+                        <p className="mt-1 text-sm text-amber-600 dark:text-amber-400">
+                          No teams available for this project.
+                        </p>
+                      )}
+
+                      <InputError message={errors.team_id} className="mt-2" />
+                    </div>
+                  )}
+
                   {/* Task Name */}
                   <div>
                     <InputLabel
@@ -94,7 +244,7 @@ export default function Create({ auth, projects, users }) {
                       className="flex items-center text-gray-700 dark:text-gray-300"
                     >
                       <FileText className="h-4 w-4 mr-2 text-gray-500 dark:text-gray-400" />
-                      Task Name
+                      Task Name *
                     </InputLabel>
 
                     <TextInput
@@ -129,6 +279,7 @@ export default function Create({ auth, projects, users }) {
                           id="task_image_path"
                           type="file"
                           name="image"
+                          accept="image/*"
                           className="block w-full text-sm text-gray-500 dark:text-gray-400
                             file:mr-4 file:py-2 file:px-4
                             file:rounded-md file:border-0
@@ -202,16 +353,16 @@ export default function Create({ auth, projects, users }) {
                       className="flex items-center text-gray-700 dark:text-gray-300"
                     >
                       <CheckCircle className="h-4 w-4 mr-2 text-gray-500 dark:text-gray-400" />
-                      Task Status
+                      Task Status *
                     </InputLabel>
 
                     <SelectInput
                       name="status"
                       id="task_status"
+                      value={data.status}
                       className="mt-1 block w-full border-gray-300 dark:border-gray-700 rounded-md shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
                       onChange={(e) => setData("status", e.target.value)}
                     >
-                      <option value="">Select Status</option>
                       <option value="pending">Pending</option>
                       <option value="in_progress">In Progress</option>
                       <option value="completed">Completed</option>
@@ -228,16 +379,16 @@ export default function Create({ auth, projects, users }) {
                       className="flex items-center text-gray-700 dark:text-gray-300"
                     >
                       <Clock className="h-4 w-4 mr-2 text-gray-500 dark:text-gray-400" />
-                      Task Priority
+                      Task Priority *
                     </InputLabel>
 
                     <SelectInput
                       name="priority"
                       id="task_priority"
+                      value={data.priority}
                       className="mt-1 block w-full border-gray-300 dark:border-gray-700 rounded-md shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
                       onChange={(e) => setData("priority", e.target.value)}
                     >
-                      <option value="">Select Priority</option>
                       <option value="low">Low</option>
                       <option value="medium">Medium</option>
                       <option value="high">High</option>
@@ -247,32 +398,41 @@ export default function Create({ auth, projects, users }) {
                   </div>
 
                   {/* Assigned User */}
-                  <div>
-                    <InputLabel
-                      htmlFor="task_assigned_user"
-                      value="Assigned User"
-                      className="flex items-center text-gray-700 dark:text-gray-300"
-                    >
-                      <User className="h-4 w-4 mr-2 text-gray-500 dark:text-gray-400" />
-                      Assigned User
-                    </InputLabel>
+                  {data.project_id && (
+                    <div>
+                      <InputLabel
+                        htmlFor="task_assigned_user"
+                        value="Assigned User"
+                        className="flex items-center text-gray-700 dark:text-gray-300"
+                      >
+                        <User className="h-4 w-4 mr-2 text-gray-500 dark:text-gray-400" />
+                        Assigned User
+                      </InputLabel>
 
-                    <SelectInput
-                      name="assigned_user_id"
-                      id="task_assigned_user"
-                      className="mt-1 block w-full border-gray-300 dark:border-gray-700 rounded-md shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
-                      onChange={(e) => setData("assigned_user_id", e.target.value)}
-                    >
-                      <option value="">Select User</option>
-                      {users.data.map((user) => (
-                        <option value={user.id} key={user.id}>
-                          {user.name}
-                        </option>
-                      ))}
-                    </SelectInput>
+                      <SelectInput
+                        name="assigned_user_id"
+                        id="task_assigned_user"
+                        value={data.assigned_user_id}
+                        className="mt-1 block w-full border-gray-300 dark:border-gray-700 rounded-md shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
+                        onChange={(e) => setData("assigned_user_id", e.target.value)}
+                      >
+                        <option value="">Unassigned</option>
+                        {availableUsers.map((user) => (
+                          <option value={user.id} key={user.id}>
+                            {user.name} ({user.email})
+                          </option>
+                        ))}
+                      </SelectInput>
 
-                    <InputError message={errors.assigned_user_id} className="mt-2" />
-                  </div>
+                      {availableUsers.length === 0 && data.project_id && (
+                        <p className="mt-1 text-sm text-amber-600 dark:text-amber-400">
+                          No members available for assignment. Invite users to this project first.
+                        </p>
+                      )}
+
+                      <InputError message={errors.assigned_user_id} className="mt-2" />
+                    </div>
+                  )}
                 </div>
               </div>
 
@@ -285,10 +445,10 @@ export default function Create({ auth, projects, users }) {
                 </Link>
                 <button
                   type="submit"
-                  disabled={processing}
+                  disabled={processing || !data.project_id}
                   className="inline-flex items-center px-4 py-2 bg-emerald-600 border border-transparent rounded-md font-semibold text-xs text-white uppercase tracking-widest hover:bg-emerald-700 focus:bg-emerald-700 active:bg-emerald-800 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:ring-offset-2 dark:focus:ring-offset-gray-800 transition ease-in-out duration-150 disabled:opacity-50"
                 >
-                  Create Task
+                  {processing ? "Creating..." : "Create Task"}
                 </button>
               </div>
             </form>

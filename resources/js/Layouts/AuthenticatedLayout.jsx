@@ -5,22 +5,10 @@ import ApplicationLogo from "@/Components/ApplicationLogo"
 import Dropdown from "@/Components/Dropdown"
 import NavLink from "@/Components/NavLink"
 import ResponsiveNavLink from "@/Components/ResponsiveNavLink"
-import { Link, usePage } from "@inertiajs/react"
+import { Link } from "@inertiajs/react"
 
-export default function AuthenticatedLayout({ user, header, children }) {
+export default function Authenticated({ user, header, children }) {
   const [showingNavigationDropdown, setShowingNavigationDropdown] = useState(false)
-
-  // Safety check for user prop
-  if (!user) {
-    return (
-      <div className="min-h-screen bg-gray-100 dark:bg-gray-900 flex items-center justify-center">
-        <div className="text-center">
-          <h2 className="text-xl font-semibold text-gray-900 dark:text-white mb-2">Loading...</h2>
-          <p className="text-gray-500 dark:text-gray-400">Please wait while we authenticate you.</p>
-        </div>
-      </div>
-    )
-  }
 
   return (
     <div className="min-h-screen bg-gray-100 dark:bg-gray-900">
@@ -38,24 +26,17 @@ export default function AuthenticatedLayout({ user, header, children }) {
                 <NavLink href={route("dashboard")} active={route().current("dashboard")}>
                   Dashboard
                 </NavLink>
-                <NavLink href={route("project.index")} active={route().current("project.index")}>
+                <NavLink href={route("project.index")} active={route().current("project.*")}>
                   Projects
                 </NavLink>
-                <NavLink href={route("task.index")} active={route().current("task.index")}>
-                  All Tasks
-                </NavLink>
-                <NavLink href={route("teams.index")} active={route().current("teams.*")}>
-                  Teams
-                </NavLink>
-                <NavLink href={route("workflow.index")} active={route().current("workflow.*")}>
-                  Workflow
-                </NavLink>
-                <NavLink href={route("user.index")} active={route().current("user.index")}>
-                  Users
-                </NavLink>
-                <NavLink href={route("task.myTasks")} active={route().current("task.myTasks")}>
+                <NavLink href={route("task.index")} active={route().current("task.*")}>
                   My Tasks
                 </NavLink>
+                {user.role === "admin" && (
+                  <NavLink href={route("user.index")} active={route().current("user.*")}>
+                    Users
+                  </NavLink>
+                )}
               </div>
             </div>
 
@@ -69,9 +50,12 @@ export default function AuthenticatedLayout({ user, header, children }) {
                         className="inline-flex items-center px-3 py-2 border border-transparent text-sm leading-4 font-medium rounded-md text-gray-500 dark:text-gray-400 bg-white dark:bg-gray-800 hover:text-gray-700 dark:hover:text-gray-300 focus:outline-none transition ease-in-out duration-150"
                       >
                         {user.name}
+                        {user.role === "admin" && (
+                          <span className="ml-2 px-2 py-1 text-xs bg-blue-100 text-blue-800 rounded-full">Admin</span>
+                        )}
 
                         <svg
-                          className="ms-2 -me-0.5 h-4 w-4"
+                          className="ml-2 -mr-0.5 h-4 w-4"
                           xmlns="http://www.w3.org/2000/svg"
                           viewBox="0 0 20 20"
                           fill="currentColor"
@@ -96,7 +80,7 @@ export default function AuthenticatedLayout({ user, header, children }) {
               </div>
             </div>
 
-            <div className="-me-2 flex items-center sm:hidden">
+            <div className="-mr-2 flex items-center sm:hidden">
               <button
                 onClick={() => setShowingNavigationDropdown((previousState) => !previousState)}
                 className="inline-flex items-center justify-center p-2 rounded-md text-gray-400 dark:text-gray-500 hover:text-gray-500 dark:hover:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-900 focus:outline-none focus:bg-gray-100 dark:focus:bg-gray-900 focus:text-gray-500 dark:focus:text-gray-400 transition duration-150 ease-in-out"
@@ -127,29 +111,27 @@ export default function AuthenticatedLayout({ user, header, children }) {
             <ResponsiveNavLink href={route("dashboard")} active={route().current("dashboard")}>
               Dashboard
             </ResponsiveNavLink>
-            <ResponsiveNavLink href={route("project.index")} active={route().current("project.index")}>
+            <ResponsiveNavLink href={route("project.index")} active={route().current("project.*")}>
               Projects
             </ResponsiveNavLink>
-            <ResponsiveNavLink href={route("task.index")} active={route().current("task.index")}>
-              All Tasks
-            </ResponsiveNavLink>
-            <ResponsiveNavLink href={route("teams.index")} active={route().current("teams.*")}>
-              Teams
-            </ResponsiveNavLink>
-            <ResponsiveNavLink href={route("workflow.index")} active={route().current("workflow.*")}>
-              Workflow
-            </ResponsiveNavLink>
-            <ResponsiveNavLink href={route("user.index")} active={route().current("user.index")}>
-              Users
-            </ResponsiveNavLink>
-            <ResponsiveNavLink href={route("task.myTasks")} active={route().current("task.myTasks")}>
+            <ResponsiveNavLink href={route("task.index")} active={route().current("task.*")}>
               My Tasks
             </ResponsiveNavLink>
+            {user.role === "admin" && (
+              <ResponsiveNavLink href={route("user.index")} active={route().current("user.*")}>
+                Users
+              </ResponsiveNavLink>
+            )}
           </div>
 
-          <div className="pt-4 pb-1 border-t border-gray-200 dark:border-gray-600">
+          <div className="pt-4 pb-1 border-t border-gray-200">
             <div className="px-4">
-              <div className="font-medium text-base text-gray-800 dark:text-gray-200">{user.name}</div>
+              <div className="font-medium text-base text-gray-800">
+                {user.name}
+                {user.role === "admin" && (
+                  <span className="ml-2 px-2 py-1 text-xs bg-blue-100 text-blue-800 rounded-full">Admin</span>
+                )}
+              </div>
               <div className="font-medium text-sm text-gray-500">{user.email}</div>
             </div>
 
