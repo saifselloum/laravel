@@ -45,7 +45,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
         Route::delete('/invitations/{invitation}', [ProjectInvitationController::class, 'destroy'])->name('project.invitations.destroy');
         Route::delete('/members/{user}', [ProjectInvitationController::class, 'removeMember'])->name('project.members.remove');
         
-        // Teams
+        // Teams within projects
         Route::get('/teams', [TeamController::class, 'index'])->name('project.teams.index');
         Route::get('/teams/create', [TeamController::class, 'create'])->name('project.teams.create');
         Route::post('/teams', [TeamController::class, 'store'])->name('project.teams.store');
@@ -64,10 +64,17 @@ Route::middleware(['auth', 'verified'])->group(function () {
     // Tasks
     Route::resource('task', TaskController::class);
     
+    // Task creation helper API routes
+    Route::get('/api/task/project/{project}/data', [TaskController::class, 'getProjectData'])->name('task.project-data');
+    Route::get('/api/task/team/{team}/data', [TaskController::class, 'getTeamData'])->name('task.team-data');
+    
     // Users (Admin only)
     Route::middleware('can:admin-only')->group(function () {
         Route::resource('user', UserController::class);
     });
+    
+    // Debug routes (remove in production)
+    Route::get('/debug/project/{project}/members', [ProjectInvitationController::class, 'debugMembers'])->name('debug.project.members');
 });
 
 require __DIR__.'/auth.php';

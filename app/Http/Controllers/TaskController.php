@@ -14,6 +14,8 @@ use App\Http\Resources\UserResource;
 use App\Http\Resources\TeamResource;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
 use Illuminate\Http\Request;
 
@@ -80,8 +82,19 @@ class TaskController extends Controller
         $projectId = $request->query('project_id');
         $teamId = $request->query('team_id');
         
+        Log::info('Task create method called', [
+            'user_id' => $user->id,
+            'project_id' => $projectId,
+            'team_id' => $teamId
+        ]);
+        
         // Get projects the user has access to
         $accessibleProjects = $this->getUserAccessibleProjects($user);
+        
+        Log::info('Accessible projects found', [
+            'count' => $accessibleProjects->count(),
+            'project_ids' => $accessibleProjects->pluck('id')->toArray()
+        ]);
         
         if ($accessibleProjects->isEmpty()) {
             return redirect()->route('task.index')
@@ -105,6 +118,12 @@ class TaskController extends Controller
             
             // Get assignable users for this project
             $assignableUsers = $this->getProjectAssignableUsers($selectedProject);
+            
+            Log::info('Project data loaded for create form', [
+                'project_id' => $selectedProject->id,
+                'teams_count' => $teams->count(),
+                'users_count' => $assignableUsers->count()
+            ]);
         }
         
         // If specific team is requested
@@ -137,21 +156,49 @@ class TaskController extends Controller
     {
         $user = Auth::user();
         
+        Log::info('Getting project data for task creation', [
+            'project_id' => $project->id,
+            'user_id' => $user->id,
+            'project_name' => $project->name
+        ]);
+        
         // Check if user can access this project
         if (!$project->canBeAccessedBy($user)) {
+            Log::error('User cannot access project', [
+                'project_id' => $project->id,
+                'user_id' => $user->id
+            ]);
             abort(403, 'You do not have access to this project');
         }
         
         // Get teams for this project
         $teams = $project->teams()->get();
+        Log::info('Teams loaded for project', [
+            'project_id' => $project->id,
+            'teams_count' => $teams->count(),
+            'team_names' => $teams->pluck('name')->toArray()
+        ]);
         
         // Get assignable users for this project
         $assignableUsers = $this->getProjectAssignableUsers($project);
+        Log::info('Assignable users loaded for project', [
+            'project_id' => $project->id,
+            'users_count' => $assignableUsers->count(),
+            'user_names' => $assignableUsers->pluck('name')->toArray(),
+            'user_emails' => $assignableUsers->pluck('email')->toArray()
+        ]);
         
-        return response()->json([
+        $response = [
             'teams' => TeamResource::collection($teams),
             'users' => UserResource::collection($assignableUsers),
+        ];
+        
+        Log::info('Returning project data response', [
+            'teams_in_response' => count($response['teams']),
+            'users_in_response' => count($response['users'])
         ]);
+        
+        return response()->json($response);
     }
 
     /**
@@ -161,17 +208,35 @@ class TaskController extends Controller
     {
         $user = Auth::user();
         
+        Log::info('Getting team data for task creation', [
+            'team_id' => $team->id,
+            'user_id' => $user->id,
+            'team_name' => $team->name
+        ]);
+        
         // Check if user can access this team's project
         if (!$team->project->canBeAccessedBy($user)) {
+            Log::error('User cannot access team project', [
+                'team_id' => $team->id,
+                'project_id' => $team->project_id,
+                'user_id' => $user->id
+            ]);
             abort(403, 'You do not have access to this team');
         }
         
         // Get assignable users for this team
         $assignableUsers = $this->getTeamAssignableUsers($team);
-        
-        return response()->json([
-            'users' => UserResource::collection($assignableUsers),
+        Log::info('Assignable users loaded for team', [
+            'team_id' => $team->id,
+            'users_count' => $assignableUsers->count(),
+            'user_names' => $assignableUsers->pluck('name')->toArray()
         ]);
+        
+        $response = [
+            'users' => UserResource::collection($assignableUsers),
+        ];
+        
+        return response()->json($response);
     }
 
     /**
@@ -331,12 +396,28 @@ class TaskController extends Controller
      */
     private function getUserAccessibleProjects(User $user)
     {
-        return Project::where(function($query) use ($user) {
+        $projects = Project::where(function($query) use ($user) {
             $query->where('created_by', $user->id)
                   ->orWhereHas('members', function($q) use ($user) {
                       $q->where('user_id', $user->id);
                   });
-        })->with(['teams', 'members'])->get();
+        })->with(['teams', 'members', 'createdBy'])->get();
+        
+        Log::info('getUserAccessibleProjects result', [
+            'user_id' => $user->id,
+            'projects_count' => $projects->count(),
+            'project_details' => $projects->map(function($project) {
+                return [
+                    'id' => $project->id,
+                    'name' => $project->name,
+                    'created_by' => $project->created_by,
+                    'members_count' => $project->members->count(),
+                    'teams_count' => $project->teams->count()
+                ];
+            })->toArray()
+        ]);
+        
+        return $projects;
     }
 
     /**
@@ -357,9 +438,31 @@ class TaskController extends Controller
      */
     private function getProjectAssignableUsers(Project $project)
     {
-        // Get all project members including the creator
-        $members = $project->members()->get();
+        Log::info('Getting project assignable users', [
+            'project_id' => $project->id,
+            'project_name' => $project->name
+        ]);
+        
+        // Get project members from pivot table
+        $members = DB::table('project_members')
+            ->join('users', 'project_members.user_id', '=', 'users.id')
+            ->where('project_members.project_id', $project->id)
+            ->select('users.*')
+            ->get();
+            
+        Log::info('Project members from pivot table', [
+            'project_id' => $project->id,
+            'members_count' => $members->count(),
+            'member_emails' => $members->pluck('email')->toArray()
+        ]);
+        
+        // Get project creator
         $creator = $project->createdBy;
+        Log::info('Project creator', [
+            'project_id' => $project->id,
+            'creator_id' => $creator?->id,
+            'creator_email' => $creator?->email
+        ]);
         
         // Combine members and creator, removing duplicates
         $allUsers = collect();
@@ -369,10 +472,23 @@ class TaskController extends Controller
         }
         
         foreach ($members as $member) {
-            if (!$allUsers->contains('id', $member->id)) {
-                $allUsers->push($member);
+            $memberUser = User::find($member->id);
+            if ($memberUser && !$allUsers->contains('id', $memberUser->id)) {
+                $allUsers->push($memberUser);
             }
         }
+        
+        Log::info('Final assignable users for project', [
+            'project_id' => $project->id,
+            'total_users' => $allUsers->count(),
+            'user_details' => $allUsers->map(function($user) {
+                return [
+                    'id' => $user->id,
+                    'name' => $user->name,
+                    'email' => $user->email
+                ];
+            })->toArray()
+        ]);
         
         return $allUsers;
     }
@@ -382,6 +498,11 @@ class TaskController extends Controller
      */
     private function getTeamAssignableUsers(Team $team)
     {
+        Log::info('Getting team assignable users', [
+            'team_id' => $team->id,
+            'team_name' => $team->name
+        ]);
+        
         $teamMembers = $team->members()->get();
         $teamLeader = $team->leader;
         
@@ -396,6 +517,18 @@ class TaskController extends Controller
                 $allUsers->push($member);
             }
         }
+        
+        Log::info('Final assignable users for team', [
+            'team_id' => $team->id,
+            'total_users' => $allUsers->count(),
+            'user_details' => $allUsers->map(function($user) {
+                return [
+                    'id' => $user->id,
+                    'name' => $user->name,
+                    'email' => $user->email
+                ];
+            })->toArray()
+        ]);
         
         return $allUsers;
     }

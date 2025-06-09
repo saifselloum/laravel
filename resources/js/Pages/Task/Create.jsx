@@ -9,18 +9,9 @@ import AuthenticatedLayout from "@/Layouts/AuthenticatedLayout"
 import { Head, Link, useForm } from "@inertiajs/react"
 import { ArrowLeft, Calendar, CheckCircle, Clock, FileText, ImageIcon, Layers, User, Users } from "lucide-react"
 import { useState, useEffect } from "react"
+import axios from "axios"
 
-export default function Create({
-  auth,
-  projects,
-  allUsers = [],
-  allTeams = [],
-  projectTeamsMap = {},
-  projectUsersMap = {},
-  teamUsersMap = {},
-  selectedProjectId,
-  selectedTeamId,
-}) {
+export default function Create({ auth, projects, teams = [], users = [], selectedProjectId, selectedTeamId }) {
   const { data, setData, post, errors, processing } = useForm({
     image: "",
     name: "",
@@ -33,72 +24,123 @@ export default function Create({
     assigned_user_id: "",
   })
 
-  const [availableTeams, setAvailableTeams] = useState([])
-  const [availableUsers, setAvailableUsers] = useState([])
-  const [selectedProject, setSelectedProject] = useState(selectedProjectId || "")
+  const [availableTeams, setAvailableTeams] = useState(Array.isArray(teams) ? teams : [])
+  const [availableUsers, setAvailableUsers] = useState(Array.isArray(users) ? users : [])
+  const [loadingProjectData, setLoadingProjectData] = useState(false)
+  const [loadingTeamData, setLoadingTeamData] = useState(false)
 
-  // Filter teams and users based on selected project
+  // Debug logging
   useEffect(() => {
-    if (data.project_id) {
-      // Filter teams for selected project
-      const projectId = Number.parseInt(data.project_id)
-      const teamIds = projectTeamsMap[projectId] || []
-      const filteredTeams = allTeams.filter((team) => teamIds.includes(team.id))
-      setAvailableTeams(filteredTeams)
-
-      // Filter users for selected project
-      const userIds = projectUsersMap[projectId] || []
-      const filteredUsers = allUsers.filter((user) => userIds.includes(user.id))
-      setAvailableUsers(filteredUsers)
-    } else {
-      setAvailableTeams([])
-      setAvailableUsers([])
-    }
-  }, [data.project_id, projectTeamsMap, projectUsersMap, allTeams, allUsers])
-
-  // Filter users based on selected team
-  useEffect(() => {
-    if (data.team_id && data.project_id) {
-      const teamId = Number.parseInt(data.team_id)
-      const userIds = teamUsersMap[teamId] || []
-      const filteredUsers = allUsers.filter((user) => userIds.includes(user.id))
-      setAvailableUsers(filteredUsers)
-    } else if (data.project_id) {
-      // Reset to project users when no team is selected
-      const projectId = Number.parseInt(data.project_id)
-      const userIds = projectUsersMap[projectId] || []
-      const filteredUsers = allUsers.filter((user) => userIds.includes(user.id))
-      setAvailableUsers(filteredUsers)
-    }
-  }, [data.team_id, teamUsersMap, data.project_id, projectUsersMap, allUsers])
+    console.log("Task Create Component Mounted", {
+      projects: projects,
+      initialTeams: teams,
+      initialUsers: users,
+      selectedProjectId,
+      selectedTeamId,
+    })
+  }, [])
 
   // Handle project change
-  const handleProjectChange = (projectId) => {
+  const handleProjectChange = async (projectId) => {
+    console.log("Project selection changed:", projectId)
+
     setData((prev) => ({
       ...prev,
       project_id: projectId,
       team_id: "", // Reset team when project changes
       assigned_user_id: "", // Reset assigned user when project changes
     }))
-    setSelectedProject(projectId)
+
+    if (projectId) {
+      setLoadingProjectData(true)
+      console.log("Loading project data for project ID:", projectId)
+
+      try {
+        const url = route("task.project-data", projectId)
+        console.log("Making request to:", url)
+
+        const response = await axios.get(url)
+        console.log("Project data response:", response.data)
+
+        setAvailableTeams(response.data.teams || [])
+        setAvailableUsers(response.data.users || [])
+
+        console.log("Updated state:", {
+          teams: response.data.teams || [],
+          users: response.data.users || [],
+        })
+      } catch (error) {
+        console.error("Error loading project data:", error)
+        console.error("Error details:", {
+          status: error.response?.status,
+          statusText: error.response?.statusText,
+          data: error.response?.data,
+          message: error.message,
+        })
+
+        setAvailableTeams([])
+        setAvailableUsers([])
+      } finally {
+        setLoadingProjectData(false)
+      }
+    } else {
+      console.log("No project selected, clearing teams and users")
+      setAvailableTeams([])
+      setAvailableUsers([])
+    }
   }
 
   // Handle team change
-  const handleTeamChange = (teamId) => {
+  const handleTeamChange = async (teamId) => {
+    console.log("Team selection changed:", teamId)
+
     setData((prev) => ({
       ...prev,
       team_id: teamId,
       assigned_user_id: "", // Reset assigned user when team changes
     }))
+
+    if (teamId) {
+      setLoadingTeamData(true)
+      console.log("Loading team data for team ID:", teamId)
+
+      try {
+        const url = route("task.team-data", teamId)
+        console.log("Making request to:", url)
+
+        const response = await axios.get(url)
+        console.log("Team data response:", response.data)
+
+        setAvailableUsers(response.data.users || [])
+      } catch (error) {
+        console.error("Error loading team data:", error)
+        console.error("Error details:", {
+          status: error.response?.status,
+          statusText: error.response?.statusText,
+          data: error.response?.data,
+          message: error.message,
+        })
+        // Keep project users if team loading fails
+      } finally {
+        setLoadingTeamData(false)
+      }
+    } else if (data.project_id) {
+      console.log("No team selected, reloading project users")
+      // Reset to project users when no team is selected
+      handleProjectChange(data.project_id)
+    }
   }
 
   const onSubmit = (e) => {
     e.preventDefault()
+    console.log("Submitting task form with data:", data)
     post(route("task.store"))
   }
 
   // Check if user has access to any projects
   const projectsData = Array.isArray(projects?.data) ? projects.data : []
+  console.log("Projects data:", projectsData)
+
   if (projectsData.length === 0) {
     return (
       <AuthenticatedLayout
@@ -187,6 +229,7 @@ export default function Create({
                       value={data.project_id}
                       className="mt-1 block w-full border-gray-300 dark:border-gray-700 rounded-md shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
                       onChange={(e) => handleProjectChange(e.target.value)}
+                      disabled={loadingProjectData}
                     >
                       <option value="">Select Project</option>
                       {projectsData.map((project) => (
@@ -195,6 +238,10 @@ export default function Create({
                         </option>
                       ))}
                     </SelectInput>
+
+                    {loadingProjectData && (
+                      <p className="mt-1 text-sm text-blue-600 dark:text-blue-400">Loading project data...</p>
+                    )}
 
                     <InputError message={errors.project_id} className="mt-2" />
                   </div>
@@ -217,6 +264,7 @@ export default function Create({
                         value={data.team_id}
                         className="mt-1 block w-full border-gray-300 dark:border-gray-700 rounded-md shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
                         onChange={(e) => handleTeamChange(e.target.value)}
+                        disabled={loadingProjectData || loadingTeamData}
                       >
                         <option value="">No Team</option>
                         {availableTeams.map((team) => (
@@ -226,9 +274,13 @@ export default function Create({
                         ))}
                       </SelectInput>
 
-                      {availableTeams.length === 0 && data.project_id && (
+                      {loadingTeamData && (
+                        <p className="mt-1 text-sm text-blue-600 dark:text-blue-400">Loading team data...</p>
+                      )}
+
+                      {availableTeams.length === 0 && data.project_id && !loadingProjectData && (
                         <p className="mt-1 text-sm text-amber-600 dark:text-amber-400">
-                          No teams available for this project.
+                          No teams available in this project.
                         </p>
                       )}
 
@@ -415,6 +467,7 @@ export default function Create({
                         value={data.assigned_user_id}
                         className="mt-1 block w-full border-gray-300 dark:border-gray-700 rounded-md shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
                         onChange={(e) => setData("assigned_user_id", e.target.value)}
+                        disabled={loadingProjectData || loadingTeamData}
                       >
                         <option value="">Unassigned</option>
                         {availableUsers.map((user) => (
@@ -424,13 +477,21 @@ export default function Create({
                         ))}
                       </SelectInput>
 
-                      {availableUsers.length === 0 && data.project_id && (
+                      {availableUsers.length === 0 && data.project_id && !loadingProjectData && (
                         <p className="mt-1 text-sm text-amber-600 dark:text-amber-400">
                           No members available for assignment. Invite users to this project first.
                         </p>
                       )}
 
                       <InputError message={errors.assigned_user_id} className="mt-2" />
+
+                      {/* Debug info */}
+                      <div className="mt-2 text-xs text-gray-500">
+                        Debug: {availableUsers.length} users available
+                        {availableUsers.length > 0 && (
+                          <div className="mt-1">Users: {availableUsers.map((u) => u.name).join(", ")}</div>
+                        )}
+                      </div>
                     </div>
                   )}
                 </div>
@@ -445,7 +506,7 @@ export default function Create({
                 </Link>
                 <button
                   type="submit"
-                  disabled={processing || !data.project_id}
+                  disabled={processing || !data.project_id || loadingProjectData}
                   className="inline-flex items-center px-4 py-2 bg-emerald-600 border border-transparent rounded-md font-semibold text-xs text-white uppercase tracking-widest hover:bg-emerald-700 focus:bg-emerald-700 active:bg-emerald-800 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:ring-offset-2 dark:focus:ring-offset-gray-800 transition ease-in-out duration-150 disabled:opacity-50"
                 >
                   {processing ? "Creating..." : "Create Task"}
