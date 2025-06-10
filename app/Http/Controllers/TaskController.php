@@ -325,6 +325,7 @@ class TaskController extends Controller
             'task' => new TaskResource($task->load(['project', 'team'])),
             'users' => UserResource::collection($assignableUsers),
             'teams' => TeamResource::collection($teams),
+            'projects' => ProjectResource::collection(collect([$task->project])), // Add the current project
         ]);
     }
 

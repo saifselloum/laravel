@@ -2,414 +2,162 @@
 
 import InputError from "@/Components/InputError"
 import InputLabel from "@/Components/InputLabel"
-import SelectInput from "@/Components/SelectInput"
-import TextAreaInput from "@/Components/TextAreaInput"
 import TextInput from "@/Components/TextInput"
 import AuthenticatedLayout from "@/Layouts/AuthenticatedLayout"
 import { Head, Link, useForm } from "@inertiajs/react"
-import { ArrowLeft, Calendar, CheckCircle, Clock, FileText, ImageIcon, Layers, User, Users } from "lucide-react"
-import { useState } from "react"
-import { route } from "laravel-vite-plugin/inertia-helpers"
+import { UserPlus, ArrowLeft, Mail, Lock, User } from "lucide-react"
 
-export default function Create({ auth, projects, teams = [], users = [], selectedProjectId, selectedTeamId }) {
+export default function Create({ auth }) {
   const { data, setData, post, errors, processing } = useForm({
-    image: "",
     name: "",
-    status: "pending",
-    description: "",
-    due_date: "",
-    project_id: selectedProjectId || "",
-    team_id: selectedTeamId || "",
-    priority: "medium",
-    assigned_user_id: "",
+    email: "",
+    password: "",
+    password_confirmation: "",
   })
-
-  const [availableTeams, setAvailableTeams] = useState(teams || [])
-  const [availableUsers, setAvailableUsers] = useState(Array.isArray(users) ? users : [])
-
-  // Handle project change
-  const handleProjectChange = (projectId) => {
-    setData((prev) => ({
-      ...prev,
-      project_id: projectId,
-      team_id: "", // Reset team when project changes
-      assigned_user_id: "", // Reset assigned user when project changes
-    }))
-
-    if (projectId) {
-      // Filter teams for selected project
-      const projectsData = Array.isArray(projects?.data) ? projects.data : []
-      const selectedProject = projectsData.find((p) => p.id == projectId)
-      setAvailableTeams(selectedProject?.teams || [])
-
-      // Get assignable users for the project
-      // This would typically be handled by a separate API call or included in project data
-      const projectUsers = Array.isArray(users) ? users : []
-      setAvailableUsers(projectUsers)
-    } else {
-      setAvailableTeams([])
-      setAvailableUsers([])
-    }
-  }
-
-  // Handle team change
-  const handleTeamChange = (teamId) => {
-    setData((prev) => ({
-      ...prev,
-      team_id: teamId,
-      assigned_user_id: "", // Reset assigned user when team changes
-    }))
-
-    // Filter users based on team membership if needed
-    // This would typically require additional data or API call
-  }
 
   const onSubmit = (e) => {
     e.preventDefault()
-    post(route("task.store"))
-  }
-
-  // Check if user has access to any projects
-  const projectsData = Array.isArray(projects?.data) ? projects.data : []
-  if (projectsData.length === 0) {
-    return (
-      <AuthenticatedLayout
-        user={auth.user}
-        header={
-          <div className="flex justify-between items-center">
-            <h2 className="font-semibold text-xl text-gray-800 dark:text-gray-200 leading-tight">Create New Task</h2>
-          </div>
-        }
-      >
-        <Head title="Create Task" />
-
-        <div className="py-12">
-          <div className="max-w-4xl mx-auto sm:px-6 lg:px-8">
-            <div className="bg-white dark:bg-gray-800 overflow-hidden shadow-sm sm:rounded-lg">
-              <div className="p-6 text-center">
-                <div className="mb-4">
-                  <Layers className="h-16 w-16 mx-auto text-gray-400 dark:text-gray-600" />
-                </div>
-                <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-2">No Project Access</h3>
-                <p className="text-gray-500 dark:text-gray-400 mb-6">
-                  You need to be a member of at least one project to create tasks. Please ask a project owner to invite
-                  you to their project.
-                </p>
-                <Link
-                  href={route("dashboard")}
-                  className="inline-flex items-center px-4 py-2 bg-gray-600 border border-transparent rounded-md font-semibold text-xs text-white uppercase tracking-widest hover:bg-gray-700 focus:bg-gray-700 active:bg-gray-800 focus:outline-none focus:ring-2 focus:ring-gray-500 focus:ring-offset-2 dark:focus:ring-offset-gray-800 transition ease-in-out duration-150"
-                >
-                  <ArrowLeft className="h-4 w-4 mr-2" />
-                  Back to Dashboard
-                </Link>
-              </div>
-            </div>
-          </div>
-        </div>
-      </AuthenticatedLayout>
-    )
+    post(route("user.store"))
   }
 
   return (
     <AuthenticatedLayout
       user={auth.user}
       header={
-        <div className="flex justify-between items-center">
-          <h2 className="font-semibold text-xl text-gray-800 dark:text-gray-200 leading-tight flex items-center">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center space-x-3">
             <Link
-              href={route("task.index")}
-              className="mr-2 text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300"
+              href={route("user.index")}
+              className="p-2 text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors"
             >
               <ArrowLeft className="h-5 w-5" />
             </Link>
-            Create New Task
-          </h2>
+            <div className="bg-gradient-to-r from-emerald-500 to-green-600 p-2 rounded-lg">
+              <UserPlus className="h-6 w-6 text-white" />
+            </div>
+            <div>
+              <h2 className="text-2xl font-bold text-gray-800 dark:text-gray-200">Create New User</h2>
+              <p className="text-sm text-gray-500 dark:text-gray-400">Add a new team member</p>
+            </div>
+          </div>
         </div>
       }
     >
-      <Head title="Create Task" />
+      <Head title="Create User" />
 
-      <div className="py-12">
-        <div className="max-w-4xl mx-auto sm:px-6 lg:px-8">
-          <div className="bg-white dark:bg-gray-800 overflow-hidden shadow-sm sm:rounded-lg">
-            <div className="p-6 border-b border-gray-200 dark:border-gray-700">
-              <h3 className="text-lg font-medium text-gray-900 dark:text-white">Task Information</h3>
-              <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
-                Fill in the details below to create a new task.
-              </p>
+      <div className="py-8">
+        <div className="max-w-2xl mx-auto sm:px-6 lg:px-8">
+          <div className="bg-white dark:bg-gray-800 overflow-hidden shadow-xl rounded-2xl border border-gray-200 dark:border-gray-700">
+            <div className="bg-gradient-to-r from-gray-50 to-gray-100 dark:from-gray-700 dark:to-gray-800 px-6 py-4 border-b border-gray-200 dark:border-gray-700">
+              <h3 className="text-lg font-semibold text-gray-900 dark:text-white">User Information</h3>
+              <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">Fill in the details for the new user</p>
             </div>
 
             <form onSubmit={onSubmit} className="p-6 space-y-6">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <div className="space-y-6">
-                  {/* Project Selection */}
-                  <div>
-                    <InputLabel
-                      htmlFor="task_project_id"
-                      value="Project"
-                      className="flex items-center text-gray-700 dark:text-gray-300"
-                    >
-                      <Layers className="h-4 w-4 mr-2 text-gray-500 dark:text-gray-400" />
-                      Project *
-                    </InputLabel>
-
-                    <SelectInput
-                      name="project_id"
-                      id="task_project_id"
-                      value={data.project_id}
-                      className="mt-1 block w-full border-gray-300 dark:border-gray-700 rounded-md shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
-                      onChange={(e) => handleProjectChange(e.target.value)}
-                    >
-                      <option value="">Select Project</option>
-                      {projectsData.map((project) => (
-                        <option value={project.id} key={project.id}>
-                          {project.name}
-                        </option>
-                      ))}
-                    </SelectInput>
-
-                    <InputError message={errors.project_id} className="mt-2" />
-                  </div>
-
-                  {/* Team Selection */}
-                  {data.project_id && (
-                    <div>
-                      <InputLabel
-                        htmlFor="task_team_id"
-                        value="Team (Optional)"
-                        className="flex items-center text-gray-700 dark:text-gray-300"
-                      >
-                        <Users className="h-4 w-4 mr-2 text-gray-500 dark:text-gray-400" />
-                        Team (Optional)
-                      </InputLabel>
-
-                      <SelectInput
-                        name="team_id"
-                        id="task_team_id"
-                        value={data.team_id}
-                        className="mt-1 block w-full border-gray-300 dark:border-gray-700 rounded-md shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
-                        onChange={(e) => handleTeamChange(e.target.value)}
-                      >
-                        <option value="">No Team</option>
-                        {availableTeams.map((team) => (
-                          <option value={team.id} key={team.id}>
-                            {team.name}
-                          </option>
-                        ))}
-                      </SelectInput>
-
-                      <InputError message={errors.team_id} className="mt-2" />
-                    </div>
-                  )}
-
-                  {/* Task Name */}
-                  <div>
-                    <InputLabel
-                      htmlFor="task_name"
-                      value="Task Name"
-                      className="flex items-center text-gray-700 dark:text-gray-300"
-                    >
-                      <FileText className="h-4 w-4 mr-2 text-gray-500 dark:text-gray-400" />
-                      Task Name *
-                    </InputLabel>
-
-                    <TextInput
-                      id="task_name"
-                      type="text"
-                      name="name"
-                      value={data.name}
-                      className="mt-1 block w-full border-gray-300 dark:border-gray-700 rounded-md shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
-                      isFocused={true}
-                      onChange={(e) => setData("name", e.target.value)}
-                      placeholder="Enter task name"
-                    />
-
-                    <InputError message={errors.name} className="mt-2" />
-                  </div>
-
-                  {/* Task Image */}
-                  <div>
-                    <InputLabel
-                      htmlFor="task_image_path"
-                      value="Task Image"
-                      className="flex items-center text-gray-700 dark:text-gray-300"
-                    >
-                      <ImageIcon className="h-4 w-4 mr-2 text-gray-500 dark:text-gray-400" />
-                      Task Image
-                    </InputLabel>
-
-                    <div className="mt-1 flex items-center">
-                      <label className="block w-full">
-                        <span className="sr-only">Choose file</span>
-                        <input
-                          id="task_image_path"
-                          type="file"
-                          name="image"
-                          accept="image/*"
-                          className="block w-full text-sm text-gray-500 dark:text-gray-400
-                            file:mr-4 file:py-2 file:px-4
-                            file:rounded-md file:border-0
-                            file:text-sm file:font-semibold
-                            file:bg-gray-50 file:text-gray-700
-                            dark:file:bg-gray-700 dark:file:text-gray-200
-                            hover:file:bg-gray-100 dark:hover:file:bg-gray-600
-                            focus:outline-none"
-                          onChange={(e) => setData("image", e.target.files[0])}
-                        />
-                      </label>
-                    </div>
-
-                    <InputError message={errors.image} className="mt-2" />
-                  </div>
-
-                  {/* Task Description */}
-                  <div>
-                    <InputLabel
-                      htmlFor="task_description"
-                      value="Task Description"
-                      className="flex items-center text-gray-700 dark:text-gray-300"
-                    >
-                      <FileText className="h-4 w-4 mr-2 text-gray-500 dark:text-gray-400" />
-                      Task Description
-                    </InputLabel>
-
-                    <TextAreaInput
-                      id="task_description"
-                      name="description"
-                      value={data.description}
-                      className="mt-1 block w-full border-gray-300 dark:border-gray-700 rounded-md shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
-                      rows={4}
-                      onChange={(e) => setData("description", e.target.value)}
-                      placeholder="Enter task description"
-                    />
-
-                    <InputError message={errors.description} className="mt-2" />
-                  </div>
-                </div>
-
-                <div className="space-y-6">
-                  {/* Due Date */}
-                  <div>
-                    <InputLabel
-                      htmlFor="task_due_date"
-                      value="Due Date"
-                      className="flex items-center text-gray-700 dark:text-gray-300"
-                    >
-                      <Calendar className="h-4 w-4 mr-2 text-gray-500 dark:text-gray-400" />
-                      Due Date
-                    </InputLabel>
-
-                    <TextInput
-                      id="task_due_date"
-                      type="date"
-                      name="due_date"
-                      value={data.due_date}
-                      className="mt-1 block w-full border-gray-300 dark:border-gray-700 rounded-md shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
-                      onChange={(e) => setData("due_date", e.target.value)}
-                    />
-
-                    <InputError message={errors.due_date} className="mt-2" />
-                  </div>
-
-                  {/* Task Status */}
-                  <div>
-                    <InputLabel
-                      htmlFor="task_status"
-                      value="Task Status"
-                      className="flex items-center text-gray-700 dark:text-gray-300"
-                    >
-                      <CheckCircle className="h-4 w-4 mr-2 text-gray-500 dark:text-gray-400" />
-                      Task Status *
-                    </InputLabel>
-
-                    <SelectInput
-                      name="status"
-                      id="task_status"
-                      value={data.status}
-                      className="mt-1 block w-full border-gray-300 dark:border-gray-700 rounded-md shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
-                      onChange={(e) => setData("status", e.target.value)}
-                    >
-                      <option value="pending">Pending</option>
-                      <option value="in_progress">In Progress</option>
-                      <option value="completed">Completed</option>
-                    </SelectInput>
-
-                    <InputError message={errors.status} className="mt-2" />
-                  </div>
-
-                  {/* Task Priority */}
-                  <div>
-                    <InputLabel
-                      htmlFor="task_priority"
-                      value="Task Priority"
-                      className="flex items-center text-gray-700 dark:text-gray-300"
-                    >
-                      <Clock className="h-4 w-4 mr-2 text-gray-500 dark:text-gray-400" />
-                      Task Priority *
-                    </InputLabel>
-
-                    <SelectInput
-                      name="priority"
-                      id="task_priority"
-                      value={data.priority}
-                      className="mt-1 block w-full border-gray-300 dark:border-gray-700 rounded-md shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
-                      onChange={(e) => setData("priority", e.target.value)}
-                    >
-                      <option value="low">Low</option>
-                      <option value="medium">Medium</option>
-                      <option value="high">High</option>
-                    </SelectInput>
-
-                    <InputError message={errors.priority} className="mt-2" />
-                  </div>
-
-                  {/* Assigned User */}
-                  {data.project_id && (
-                    <div>
-                      <InputLabel
-                        htmlFor="task_assigned_user"
-                        value="Assigned User"
-                        className="flex items-center text-gray-700 dark:text-gray-300"
-                      >
-                        <User className="h-4 w-4 mr-2 text-gray-500 dark:text-gray-400" />
-                        Assigned User
-                      </InputLabel>
-
-                      <SelectInput
-                        name="assigned_user_id"
-                        id="task_assigned_user"
-                        value={data.assigned_user_id}
-                        className="mt-1 block w-full border-gray-300 dark:border-gray-700 rounded-md shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
-                        onChange={(e) => setData("assigned_user_id", e.target.value)}
-                      >
-                        <option value="">Unassigned</option>
-                        {Array.isArray(availableUsers) &&
-                          availableUsers.map((user) => (
-                            <option value={user.id} key={user.id}>
-                              {user.name}
-                            </option>
-                          ))}
-                      </SelectInput>
-
-                      <InputError message={errors.assigned_user_id} className="mt-2" />
-                    </div>
-                  )}
-                </div>
+              {/* Name Field */}
+              <div>
+                <InputLabel
+                  htmlFor="user_name"
+                  value="Full Name"
+                  className="flex items-center text-gray-700 dark:text-gray-300 font-medium"
+                >
+                  <User className="h-4 w-4 mr-2 text-gray-500 dark:text-gray-400" />
+                  Full Name
+                </InputLabel>
+                <TextInput
+                  id="user_name"
+                  type="text"
+                  name="name"
+                  value={data.name}
+                  className="mt-2 block w-full border-gray-300 dark:border-gray-600 rounded-lg shadow-sm focus:border-emerald-500 focus:ring-emerald-500"
+                  isFocused={true}
+                  onChange={(e) => setData("name", e.target.value)}
+                  placeholder="Enter full name"
+                />
+                <InputError message={errors.name} className="mt-2" />
               </div>
 
-              <div className="flex items-center justify-end mt-6 gap-4">
+              {/* Email Field */}
+              <div>
+                <InputLabel
+                  htmlFor="user_email"
+                  value="Email Address"
+                  className="flex items-center text-gray-700 dark:text-gray-300 font-medium"
+                >
+                  <Mail className="h-4 w-4 mr-2 text-gray-500 dark:text-gray-400" />
+                  Email Address
+                </InputLabel>
+                <TextInput
+                  id="user_email"
+                  type="email"
+                  name="email"
+                  value={data.email}
+                  className="mt-2 block w-full border-gray-300 dark:border-gray-600 rounded-lg shadow-sm focus:border-emerald-500 focus:ring-emerald-500"
+                  onChange={(e) => setData("email", e.target.value)}
+                  placeholder="Enter email address"
+                />
+                <InputError message={errors.email} className="mt-2" />
+              </div>
+
+              {/* Password Field */}
+              <div>
+                <InputLabel
+                  htmlFor="user_password"
+                  value="Password"
+                  className="flex items-center text-gray-700 dark:text-gray-300 font-medium"
+                >
+                  <Lock className="h-4 w-4 mr-2 text-gray-500 dark:text-gray-400" />
+                  Password
+                </InputLabel>
+                <TextInput
+                  id="user_password"
+                  type="password"
+                  name="password"
+                  value={data.password}
+                  className="mt-2 block w-full border-gray-300 dark:border-gray-600 rounded-lg shadow-sm focus:border-emerald-500 focus:ring-emerald-500"
+                  onChange={(e) => setData("password", e.target.value)}
+                  placeholder="Enter password"
+                />
+                <InputError message={errors.password} className="mt-2" />
+              </div>
+
+              {/* Confirm Password Field */}
+              <div>
+                <InputLabel
+                  htmlFor="user_password_confirmation"
+                  value="Confirm Password"
+                  className="flex items-center text-gray-700 dark:text-gray-300 font-medium"
+                >
+                  <Lock className="h-4 w-4 mr-2 text-gray-500 dark:text-gray-400" />
+                  Confirm Password
+                </InputLabel>
+                <TextInput
+                  id="user_password_confirmation"
+                  type="password"
+                  name="password_confirmation"
+                  value={data.password_confirmation}
+                  className="mt-2 block w-full border-gray-300 dark:border-gray-600 rounded-lg shadow-sm focus:border-emerald-500 focus:ring-emerald-500"
+                  onChange={(e) => setData("password_confirmation", e.target.value)}
+                  placeholder="Confirm password"
+                />
+                <InputError message={errors.password_confirmation} className="mt-2" />
+              </div>
+
+              {/* Action Buttons */}
+              <div className="flex items-center justify-end space-x-4 pt-6 border-t border-gray-200 dark:border-gray-700">
                 <Link
-                  href={route("task.index")}
-                  className="inline-flex items-center px-4 py-2 bg-gray-200 dark:bg-gray-700 border border-transparent rounded-md font-semibold text-xs text-gray-700 dark:text-gray-300 uppercase tracking-widest hover:bg-gray-300 dark:hover:bg-gray-600 focus:bg-gray-300 dark:focus:bg-gray-600 active:bg-gray-300 dark:active:bg-gray-600 focus:outline-none focus:ring-2 focus:ring-gray-500 focus:ring-offset-2 dark:focus:ring-offset-gray-800 transition ease-in-out duration-150"
+                  href={route("user.index")}
+                  className="inline-flex items-center px-4 py-2 bg-gray-200 dark:bg-gray-700 border border-transparent rounded-lg font-semibold text-xs text-gray-700 dark:text-gray-300 uppercase tracking-widest hover:bg-gray-300 dark:hover:bg-gray-600 focus:bg-gray-300 dark:focus:bg-gray-600 active:bg-gray-300 dark:active:bg-gray-600 focus:outline-none focus:ring-2 focus:ring-gray-500 focus:ring-offset-2 dark:focus:ring-offset-gray-800 transition ease-in-out duration-150"
                 >
                   Cancel
                 </Link>
                 <button
                   type="submit"
-                  disabled={processing || !data.project_id}
-                  className="inline-flex items-center px-4 py-2 bg-emerald-600 border border-transparent rounded-md font-semibold text-xs text-white uppercase tracking-widest hover:bg-emerald-700 focus:bg-emerald-700 active:bg-emerald-800 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:ring-offset-2 dark:focus:ring-offset-gray-800 transition ease-in-out duration-150 disabled:opacity-50"
+                  disabled={processing}
+                  className="inline-flex items-center px-4 py-2 bg-emerald-600 border border-transparent rounded-lg font-semibold text-xs text-white uppercase tracking-widest hover:bg-emerald-700 focus:bg-emerald-700 active:bg-emerald-800 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:ring-offset-2 dark:focus:ring-offset-gray-800 transition ease-in-out duration-150 disabled:opacity-50"
                 >
-                  {processing ? "Creating..." : "Create Task"}
+                  <UserPlus className="h-4 w-4 mr-2" />
+                  Create User
                 </button>
               </div>
             </form>

@@ -9,22 +9,118 @@ import AuthenticatedLayout from "@/Layouts/AuthenticatedLayout"
 import { Head, Link, useForm } from "@inertiajs/react"
 import { ArrowLeft, Calendar, CheckCircle, Clock, FileText, ImageIcon, Layers, User } from "lucide-react"
 
-export default function Edit({ auth, task, projects, users }) {
+export default function Edit({ auth, task, projects = [], users = [], teams = [] }) {
+  console.log("Edit Task Component Props:", {
+    task,
+    projects,
+    users,
+    teams,
+    auth,
+  })
+
+  // Ensure we have valid data structures
+  const safeProjects = projects?.data || projects || []
+  const safeUsers = users?.data || users || []
+  const safeTeams = teams?.data || teams || []
+
+  console.log("Safe data structures:", {
+    safeProjects,
+    safeUsers,
+    safeTeams,
+  })
+
   const { data, setData, post, errors, processing } = useForm({
     image: "",
-    name: task.name || "",
-    status: task.status || "",
-    description: task.description || "",
-    due_date: task.due_date || "",
-    project_id: task.project_id || "",
-    priority: task.priority || "",
-    assigned_user_id: task.assigned_user_id || "",
+    name: task?.name || "",
+    status: task?.status || "",
+    description: task?.description || "",
+    due_date: task?.due_date || "",
+    project_id: task?.project_id || "",
+    team_id: task?.team_id || "",
+    priority: task?.priority || "",
+    assigned_user_id: task?.assigned_user_id || "",
     _method: "PUT",
   })
 
   const onSubmit = (e) => {
     e.preventDefault()
+    console.log("Submitting task update:", data)
     post(route("task.update", task.id))
+  }
+
+  // Handle project change to load teams and users dynamically
+  const handleProjectChange = async (projectId) => {
+    console.log("Project changed to:", projectId)
+    setData((prev) => ({
+      ...prev,
+      project_id: projectId,
+      team_id: "", // Reset team selection
+      assigned_user_id: "", // Reset user selection
+    }))
+
+    if (projectId) {
+      try {
+        const response = await fetch(route("task.project-data", projectId))
+        if (response.ok) {
+          const projectData = await response.json()
+          console.log("Loaded project data:", projectData)
+          // The data will be used to update the dropdowns
+          // You might want to store this in component state if needed
+        } else {
+          console.error("Failed to load project data:", response.status)
+        }
+      } catch (error) {
+        console.error("Error loading project data:", error)
+      }
+    }
+  }
+
+  // Handle team change to load team members
+  const handleTeamChange = async (teamId) => {
+    console.log("Team changed to:", teamId)
+    setData((prev) => ({
+      ...prev,
+      team_id: teamId,
+      assigned_user_id: "", // Reset user selection
+    }))
+
+    if (teamId) {
+      try {
+        const response = await fetch(route("task.team-data", teamId))
+        if (response.ok) {
+          const teamData = await response.json()
+          console.log("Loaded team data:", teamData)
+        } else {
+          console.error("Failed to load team data:", response.status)
+        }
+      } catch (error) {
+        console.error("Error loading team data:", error)
+      }
+    }
+  }
+
+  if (!task) {
+    return (
+      <AuthenticatedLayout user={auth.user}>
+        <Head title="Task Not Found" />
+        <div className="py-12">
+          <div className="max-w-4xl mx-auto sm:px-6 lg:px-8">
+            <div className="bg-white dark:bg-gray-800 overflow-hidden shadow-sm sm:rounded-lg">
+              <div className="p-6">
+                <h3 className="text-lg font-medium text-gray-900 dark:text-white">Task Not Found</h3>
+                <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">The requested task could not be found.</p>
+                <Link
+                  href={route("task.index")}
+                  className="mt-4 inline-flex items-center px-4 py-2 bg-gray-800 border border-transparent rounded-md font-semibold text-xs text-white uppercase tracking-widest hover:bg-gray-700"
+                >
+                  Back to Tasks
+                </Link>
+              </div>
+            </div>
+          </div>
+        </div>
+      </AuthenticatedLayout>
+    )
   }
 
   return (
@@ -92,10 +188,10 @@ export default function Edit({ auth, task, projects, users }) {
                       id="task_project_id"
                       value={data.project_id}
                       className="mt-1 block w-full border-gray-300 dark:border-gray-700 rounded-md shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
-                      onChange={(e) => setData("project_id", e.target.value)}
+                      onChange={(e) => handleProjectChange(e.target.value)}
                     >
                       <option value="">Select Project</option>
-                      {projects.data.map((project) => (
+                      {safeProjects.map((project) => (
                         <option value={project.id} key={project.id}>
                           {project.name}
                         </option>
@@ -104,6 +200,37 @@ export default function Edit({ auth, task, projects, users }) {
 
                     <InputError message={errors.project_id} className="mt-2" />
                   </div>
+
+                  {/* Team Selection */}
+                  {safeTeams.length > 0 && (
+                    <div>
+                      <InputLabel
+                        htmlFor="task_team_id"
+                        value="Team (Optional)"
+                        className="flex items-center text-gray-700 dark:text-gray-300"
+                      >
+                        <User className="h-4 w-4 mr-2 text-gray-500 dark:text-gray-400" />
+                        Team (Optional)
+                      </InputLabel>
+
+                      <SelectInput
+                        name="team_id"
+                        id="task_team_id"
+                        value={data.team_id}
+                        className="mt-1 block w-full border-gray-300 dark:border-gray-700 rounded-md shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
+                        onChange={(e) => handleTeamChange(e.target.value)}
+                      >
+                        <option value="">No Team</option>
+                        {safeTeams.map((team) => (
+                          <option value={team.id} key={team.id}>
+                            {team.name}
+                          </option>
+                        ))}
+                      </SelectInput>
+
+                      <InputError message={errors.team_id} className="mt-2" />
+                    </div>
+                  )}
 
                   {/* Task Name */}
                   <div>
@@ -283,15 +410,25 @@ export default function Edit({ auth, task, projects, users }) {
                       onChange={(e) => setData("assigned_user_id", e.target.value)}
                     >
                       <option value="">Select User</option>
-                      {users.data.map((user) => (
+                      {safeUsers.map((user) => (
                         <option value={user.id} key={user.id}>
-                          {user.name}
+                          {user.name} ({user.email})
                         </option>
                       ))}
                     </SelectInput>
 
                     <InputError message={errors.assigned_user_id} className="mt-2" />
                   </div>
+
+                  {/* Debug Information */}
+                  {process.env.NODE_ENV === "development" && (
+                    <div className="bg-gray-100 dark:bg-gray-700 p-4 rounded-lg">
+                      <h4 className="text-sm font-medium text-gray-900 dark:text-white mb-2">Debug Info:</h4>
+                      <p className="text-xs text-gray-600 dark:text-gray-400">
+                        Projects: {safeProjects.length} | Users: {safeUsers.length} | Teams: {safeTeams.length}
+                      </p>
+                    </div>
+                  )}
                 </div>
               </div>
 

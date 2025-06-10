@@ -11,16 +11,16 @@ use Illuminate\Foundation\Application;
 use Illuminate\Support\Facades\Route;
 use Inertia\Inertia;
 
-Route::get('/', function () {
-    return Inertia::render('Welcome', [
-        'canLogin' => Route::has('login'),
-        'canRegister' => Route::has('register'),
-        'laravelVersion' => Application::VERSION,
-        'phpVersion' => PHP_VERSION,
-    ]);
-});
+// Route::get('/', function () {
+//     return Inertia::render('register', [
+//         'canLogin' => Route::has('login'),
+//         'canRegister' => Route::has('register'),
+//         'laravelVersion' => Application::VERSION,
+//         'phpVersion' => PHP_VERSION,
+//     ]);
+// });
 
-Route::get('/dashboard', [DashboardController::class, 'index'])
+Route::get('/', [DashboardController::class, 'index'])
     ->middleware(['auth', 'verified'])
     ->name('dashboard');
 
@@ -69,9 +69,9 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::get('/api/task/team/{team}/data', [TaskController::class, 'getTeamData'])->name('task.team-data');
     
     // Users (Admin only)
-    Route::middleware('can:admin-only')->group(function () {
+    // Route::middleware('can:admin-only')->group(function () {
         Route::resource('user', UserController::class);
-    });
+    // });
     
     // Debug routes (remove in production)
     Route::get('/debug/project/{project}/members', [ProjectInvitationController::class, 'debugMembers'])->name('debug.project.members');
